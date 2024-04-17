@@ -8,7 +8,6 @@ final class AddVehicleDto
 {
     public function __construct(
         private readonly string $fleetId,
-        private readonly string $type,
         private readonly string $plateNumber,
     ) {
     }
@@ -16,10 +15,6 @@ final class AddVehicleDto
     public function fleetId(): string
     {
         return $this->fleetId;
-    }
-    public function type(): string
-    {
-        return $this->type;
     }
 
     public function plateNumber(): string

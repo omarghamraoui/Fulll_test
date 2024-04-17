@@ -2,35 +2,58 @@
 
 namespace App\Domain\Model;
 
-final class Vehicle
+use Doctrine\ORM\Mapping as ORM;
+
+#[ORM\Entity]
+#[ORM\UniqueConstraint(name: "fleet_vehicle", columns: ["fleet_id", "plate_number"])]
+class Vehicle
 {
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column]
+    private ?int $id = null;
+
     public function __construct(
-        private string $type,
+        #[ORM\Column(length: 255)]
         private string $plateNumber,
-        private ?Location $location = null
+        #[ORM\OneToOne(inversedBy: 'vehicle', cascade: ['persist', 'remove'])]
+        private ?Location $location = null,
+        #[ORM\ManyToOne(cascade: ['persist'], inversedBy: 'vehicle')]
+        #[ORM\JoinColumn(nullable: false)]
+        private ?Fleet $fleet = null
     ) {
     }
 
-    public function type(): string
+    public function getId(): ?int
     {
-        return $this->type;
+        return $this->id;
     }
 
-    public function plateNumber() : string
+    public function plateNumber(): string
     {
         return $this->plateNumber;
     }
-    public function checkLocation(?Location $location = null) : bool
+    public function checkLocation(?Location $location = null): bool
     {
-        if (null === $this->location) {
+        if (null === $this->location || null === $location) {
             return false;
         }
-
         return $this->location->isEqual($location);
     }
 
-    public function parkAt(Location $location) : Vehicle
+    public function parkAt(Location $location): Vehicle
     {
-        return new Vehicle($this->type(), $this->plateNumber(), $location);
+        $this->location = $location;
+        return $this;
+    }
+
+    public function getFleet(): ?Fleet
+    {
+        return $this->fleet;
+    }
+
+    public function hasLocation(): bool
+    {
+        return $this->location !== null;
     }
 }

@@ -6,7 +6,7 @@ use App\Domain\Model\Fleet;
 
 interface FleetRepositoryInterface
 {
-    public function find(string $id) : ?Fleet;
+    public function findFleetById(string $id): ?Fleet;
 
-    public function save(Fleet $fleet, bool $flush = false) : void;
+    public function save(Fleet $fleet, bool $flush = false): void;
 }

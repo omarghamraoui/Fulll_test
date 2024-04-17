@@ -1,0 +1,12 @@
+parameters:
+    level: 9
+    ignoreErrors:
+        -
+            message: "#^Call to an undefined method Doctrine\\\\Common\\\\Collections\\\\Collection\\:\\:matching\\(\\)\\.$#"
+            count: 1
+            path: src/Domain/Model/Fleet.php
+    checkMissingIterableValueType: false
+    checkGenericClassInNonGenericObjectType: false
+    treatPhpDocTypesAsCertain: false
+    excludePaths:
+        - tests/

@@ -2,17 +2,30 @@
 
 namespace App\Domain\Model;
 
+use Doctrine\Common\Collections\Criteria;
 use Exception;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\ORM\Mapping as ORM;
 
-final class Fleet
+#[ORM\Entity]
+class Fleet
 {
-    private array $vehicles = [];
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column]
+    private ?int $id = null;
+    #[ORM\OneToMany(targetEntity: Vehicle::class, mappedBy: 'fleet', cascade: ['persist'])]
+    private Collection $vehicles;
 
-    public function __construct(private readonly string $id)
-    {
+    public function __construct(
+        #[ORM\Column(length: 255, unique: true)]
+        private string $fleetId
+    ) {
+        $this->vehicles = new ArrayCollection();
     }
 
-    public function getId() : string
+    public function getId(): ?int
     {
         return $this->id;
     }
@@ -20,16 +33,15 @@ final class Fleet
     /**
      * @throws Exception
      */
-    public function addVehicle(Vehicle $vehicle) : void
+    public function addVehicle(Vehicle $vehicle): void
     {
         if (true === $this->has($vehicle->plateNumber())) {
             throw new Exception('Vehicle already registered');
         }
-
         $this->vehicles[$vehicle->plateNumber()] = $vehicle;
     }
 
-    public function has(string $plateNumber) : bool
+    public function has(string $plateNumber): bool
     {
         return isset($this->vehicles[$plateNumber]);
     }
@@ -47,7 +59,7 @@ final class Fleet
     /**
      * @throws Exception
      */
-    public function isAlreadyParked(string $plateNumber, Location $location) : bool
+    public function isAlreadyParked(string $plateNumber, Location $location): bool
     {
         $vehicle = $this->find($plateNumber);
         if ($vehicle === null) {
@@ -61,8 +73,24 @@ final class Fleet
         return $bool;
     }
 
-    public function find(string $plateNumber) : ?Vehicle
+    public function find(string $plateNumber): ?Vehicle
     {
-        return $this->vehicles[$plateNumber] ?? null;
+        $criteria = Criteria::create()
+            ->andWhere(Criteria::expr()->eq('plateNumber', $plateNumber));
+        $vehicles = $this->vehicles->matching($criteria);
+        return !$vehicles->isEmpty() ? $vehicles->first() : null ;
+    }
+
+    /**
+     * @return Collection<int, Vehicle>
+     */
+    public function getVehicles(): Collection
+    {
+        return $this->vehicles;
+    }
+
+    public function getFleetId(): string
+    {
+        return $this->fleetId;
     }
 }

@@ -4,18 +4,28 @@ namespace App\Infra\Repository;
 
 use App\Domain\Model\Fleet;
 use App\Domain\Repository\FleetRepositoryInterface;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\Persistence\ManagerRegistry;
 
-class FleetRepository implements FleetRepositoryInterface
+class FleetRepository extends ServiceEntityRepository implements FleetRepositoryInterface
 {
-    private $fleets = [];
-
-    public function find(string $id) : ?Fleet
+    public function __construct(ManagerRegistry $registry)
     {
-        return $this->fleets[$id] ?? null;
+        parent::__construct($registry, Fleet::class);
     }
 
-    public function save(Fleet $fleet, bool $flush = false) : void
+    public function findFleetById(string $id): ?Fleet
     {
-        $this->fleets[$fleet->getId()] = $fleet;
+        /** @var ?Fleet $fleet */
+        $fleet = $this->findOneBy(['fleetId' => $id]);
+        return $fleet;
+    }
+
+    public function save(Fleet $fleet, bool $flush = false): void
+    {
+        $this->getEntityManager()->persist($fleet);
+        if ($flush) {
+            $this->getEntityManager()->flush();
+        }
     }
 }

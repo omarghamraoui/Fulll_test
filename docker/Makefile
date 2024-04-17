@@ -22,3 +22,16 @@ stop:
 behat: ## Run behat
 behat:
 	$(DOCKER_PHP) "vendor/bin/behat"
+
+phpstan: ## Run phpstan
+phpstan:
+	$(DOCKER_PHP) "vendor/bin/phpstan analyse src"
+
+phpcs: ## Run phpcs
+phpcs:
+	$(DOCKER_PHP) "vendor/bin/phpcs"
+
+
+connect-php: ## Connect sh to container php
+connect-php:
+	$(DOCKER) exec -u $(USER_DOCKER) -it $(CONTAINER_NAME)_php-fpm sh

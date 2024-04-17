@@ -1,48 +1,52 @@
 <?php
 
+namespace App\Tests\Behat;
+
 use App\App\Dto\AddVehicleDto;
 use App\App\Dto\ParkVehicleDto;
-use App\Domain\Factory\FleetFactory;
-use App\Domain\Factory\LocationFactory;
 use App\Domain\Factory\VehicleFactory;
 use App\Domain\Model\Fleet;
 use App\Domain\Model\Location;
+use App\Domain\Model\Vehicle;
+use App\Domain\Repository\FleetRepositoryInterface;
+use App\Domain\Repository\LocationRepositoryInterface;
+use App\Domain\Repository\VehicleRepositoryInterface;
 use App\Domain\Service\FleetService;
 use App\Domain\Service\ParkVehicleService;
 use App\Domain\Service\VehicleService;
 use App\Infra\Repository\FleetRepository;
+use App\Tests\Service\DatabaseCleaner;
 use Behat\Behat\Context\Context;
+use Doctrine\ORM\EntityManagerInterface;
+use Exception;
 use PHPUnit\Framework\Assert;
 
 class FeatureContext implements Context
 {
-    private FleetRepository $fleetRepository;
-    private FleetService $fleetService;
-    private VehicleService $vehicleService;
-    private FleetFactory $fleetFactory;
-    private VehicleFactory $vehicleFactory;
-    private LocationFactory $locationFactory;
-    private ParkVehicleService $parkVehicleService;
     private Fleet $fleet;
     private Fleet $otherFleet;
-    private string $type;
+    private Vehicle $vehicle;
     private string $plateNumber;
     private Location $location;
     private ?Exception $exception = null;
 
-    public function __construct()
+    public function __construct(
+        private readonly FleetService $fleetService,
+        private readonly VehicleService $vehicleService,
+        private readonly ParkVehicleService $parkVehicleService,
+        private readonly FleetRepositoryInterface $fleetRepository,
+        private readonly VehicleRepositoryInterface $vehicleRepository,
+        private readonly LocationRepositoryInterface $locationRepository,
+        private readonly DatabaseCleaner $databaseCleaner,
+    ) {
+    }
+
+    /**
+     * @BeforeScenario
+     */
+    public function cleanDatabase()
     {
-        $this->fleetRepository = new FleetRepository();
-        $this->fleetFactory = new FleetFactory();
-        $this->vehicleFactory = new VehicleFactory();
-        $this->locationFactory = new LocationFactory();
-        $this->fleetService = new FleetService($this->fleetRepository, $this->fleetFactory);
-        $this->vehicleService = new VehicleService($this->fleetRepository, $this->vehicleFactory);
-        $this->parkVehicleService = new ParkVehicleService(
-            $this->fleetRepository,
-            $this->vehicleFactory,
-            $this->locationFactory
-        );
+        $this->databaseCleaner->cleanDatabase();
     }
 
     /**
@@ -58,8 +62,9 @@ class FeatureContext implements Context
      */
     public function aVehicle(): void
     {
-        $this->type = 'car';
         $this->plateNumber = 'AB-001-CD';
+        $addVehicle = new AddVehicleDto($this->fleet->getFleetId(), $this->plateNumber);
+        $this->vehicle = $this->vehicleService->register($addVehicle);
     }
 
     /**
@@ -67,7 +72,11 @@ class FeatureContext implements Context
      */
     public function aLocation(): void
     {
-        $this->location = new Location(26.15, 86.1);
+        $lat = 26.15;
+        $lng = 86.1;
+        $parkVehicle = new ParkVehicleDto($this->fleet->getFleetId(), $this->plateNumber, $lat, $lng);
+        $this->parkVehicleService->parkVehicle($parkVehicle);
+        $this->location = $this->locationRepository->findLocationByLatLngVehicle($lat, $lng, $this->vehicle);
     }
 
     /**
@@ -80,7 +89,6 @@ class FeatureContext implements Context
         try {
             $parkVehicleDto = new ParkVehicleDto(
                 $this->fleet->getId(),
-                $this->type,
                 $this->plateNumber,
                 $this->location->latitude(),
                 $this->location->longitude()
@@ -96,8 +104,8 @@ class FeatureContext implements Context
      */
     public function theKnownLocationOfMyVehicleShouldVerifyThisLocation()
     {
-        $fleetVerify = $this->fleetRepository->find($this->fleet->getId());
-        $vehicleFind = $fleetVerify->find($this->plateNumber);
+        $fleetVerify = $this->fleetRepository->findFleetById($this->fleet->getFleetId());
+        $vehicleFind = $this->vehicleRepository->findVehicleByPlateNumber($this->plateNumber);
         Assert::assertTrue($vehicleFind->checkLocation($this->location));
     }
 
@@ -117,7 +125,7 @@ class FeatureContext implements Context
     public function iRegisterThisVehicleIntoMyFleet()
     {
         try {
-            $registerVehicle = new AddVehicleDto($this->fleet->getId(), $this->type, $this->plateNumber);
+            $registerVehicle = new AddVehicleDto($this->fleet->getId(), $this->plateNumber);
             $this->vehicleService->register($registerVehicle);
         } catch (Exception $e) {
             $this->exception = $e;
@@ -129,7 +137,7 @@ class FeatureContext implements Context
      */
     public function thisVehicleShouldBePartOfMyVehicleFleet()
     {
-        $fleetVerify = $this->fleetRepository->find($this->fleet->getId());
+        $fleetVerify = $this->fleetRepository->findFleetById($this->fleet->getFleetId());
         Assert::assertTrue($fleetVerify->has($this->plateNumber));
     }
 
@@ -154,7 +162,7 @@ class FeatureContext implements Context
      */
     public function thisVehicleHasBeenRegisteredIntoTheOtherUserSFleet()
     {
-        $registerVehicle = new AddVehicleDto($this->otherFleet->getId(), $this->type, $this->plateNumber);
+        $registerVehicle = new AddVehicleDto($this->otherFleet->getFleetId(), $this->plateNumber);
         $this->vehicleService->register($registerVehicle);
     }
 }

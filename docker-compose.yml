@@ -41,3 +41,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
     container_name: ${CONTAINER_NAME}_mysql
+  adminer:
+    image: adminer
+    ports:
+      - '${ADMINER_PORT}:8080'
+    container_name: ${CONTAINER_NAME}_adminer

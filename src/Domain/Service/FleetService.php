@@ -19,12 +19,12 @@ final class FleetService
 
     public function createFleet(string $fleetId): Fleet
     {
-        $fleet = $this->fleetRepository->find($fleetId);
+        $fleet = $this->fleetRepository->findFleetById($fleetId);
         if ($fleet instanceof Fleet) {
             throw new Exception('Fleet already exist');
         }
         $fleet = $this->fleetFactory->create($fleetId);
-        $this->fleetRepository->save($fleet);
+        $this->fleetRepository->save($fleet, true);
         return $fleet;
     }
 }
