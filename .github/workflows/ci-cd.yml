@@ -1,4 +1,4 @@
-name: PHP Composer
+name: CI/CD Pipeline
 
 on:
   push:
@@ -32,8 +32,23 @@ jobs:
     - name: Install dependencies
       run: composer install --prefer-dist --no-progress
 
-    # Add a test script to composer.json, for instance: "test": "vendor/bin/phpunit"
-    # Docs: https://getcomposer.org/doc/articles/scripts.md
+    - name: Run tests
+      run: ./vendor/bin/behat --stop-on-failure
 
-    # - name: Run test suite
-    #   run: composer run-script test
+    - name: Run tests
+      run: ./vendor/bin/phpstan
+
+    - name: Run tests
+      run: ./vendor/bin/phpcs
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Deploy to Production
+        run: echo "Deploying to production server"
